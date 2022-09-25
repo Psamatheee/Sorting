@@ -2,15 +2,6 @@
 #include <SFML/Graphics.hpp>
 #include<vector>
 #include <random>
-struct Vector{
-    std::vector<int> &ints;
-    int p = 1;
-    int j = 1;
-
-    void next(){
-
-    }
-};
 
 void insert_sort(std::vector<int> &ints){
     int p = 1;
@@ -27,6 +18,36 @@ void insert_sort(std::vector<int> &ints){
         p = j;
     }
 }
+
+std::vector<int> merge(std::vector<int> a, std::vector<int> b){
+    std::vector<int> merged;
+    int size = 0;
+    int ia = 0;
+    int ib = 0;
+    while(size < a.size() + b.size()){
+        if(ib == b.size() ||(ia!=a.size() &&  a[ia] < b[ib])) {
+            merged.push_back(a[ia]);
+            ia++;
+        }
+        else {
+            merged.push_back(b[ib]);
+            ib++;
+        }
+        size++;
+    }
+
+    return merged;
+}
+
+std::vector<int> merge_sort(std::vector<int> ints){
+    if (ints.size() == 1) return ints;
+    std::vector<int> b = std::vector<int>(ints.begin(), ints.begin() + floor(ints.size()/2));
+    std::vector<int> c = std::vector<int>(ints.begin() + floor(ints.size() /2), ints.end());
+    b = merge_sort(b);
+    c = merge_sort(c);
+    return merge(b,c);
+}
+
 int main() {
 
     std::random_device rd;
@@ -34,19 +55,30 @@ int main() {
     std::uniform_int_distribution<int> gen(1,50);
 
 
-    int size = 50;
+    std::vector<int> vv {1,2};
+    std::vector<int> ee{vv.begin() , vv.begin() + floor(vv.size()/2)};
+    for (int tt : ee){
+    }
+
+    int size = 100;
 
     std::vector<int> nums(size);
     for(int i = 0; i < size; i++){
         nums[i] = gen(mt);
     }
 
+    std::vector<int> dd{4,22,5,17,2,6,55,9,10};
+    std::vector<int> aa = merge_sort(dd);
+    for(int a : aa ){
+        std::cout << a << " ";
+    }
+    std::cout << "\n";
+
     sf::RenderWindow window{sf::VideoMode::getDesktopMode(), "Sorting!"};
     int x = window.getSize().x;
     float width = (x-size*10) / size;
     float height = window.getSize().y;
     sf::Clock clock;
-  //  std::thread first(insert_sort, std::ref(v));  // spawn new thread that calls foo()
     while(window.isOpen()){
         window.clear();
 
@@ -57,19 +89,15 @@ int main() {
             }
         }
 
-        if(clock.getElapsedTime().asSeconds() >= 0.005){
+        if(clock.getElapsedTime().asSeconds() >= 0.5){
             insert_sort(nums);
             clock.restart();
-            for(int i : nums){
-                std::cout << i << " ";
-            }
-            std::cout << "\n";
+
         }
 
         size_t vertex_num = 4 * size;
         sf::VertexArray rectangles {sf::Quads, vertex_num};
         for(int i = 0; i < size; i++){
-            float ii = float(i);
             float left_x = 10;
             if(i != 0) left_x = rectangles[i*4-2].position.x + 10;
             rectangles[i*4].position = sf::Vector2f{left_x, height - 10};
