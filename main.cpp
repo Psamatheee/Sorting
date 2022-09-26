@@ -3,56 +3,25 @@
 #include<vector>
 #include <random>
 
-struct merge_sort_arr{
-    std::vector<int> ints;
-    std::vector<int> b;
-    std::vector<int> c;
-    int b_l_index;
-    int b_r_index;
-    int c_l_index;
-    int c_r_index;
 
-    std::vector<int> merge(){
-        std::vector<int> merged;
-        int size = 0;
-        int ib = 0;
-        int ic = 0;
-        while(size < b.size() + c.size()){
-            if(ic == c.size() ||(ib!=b.size() &&  b[ib] < c[ic])) {
-                merged.push_back(b[ib]);
-                ib++;
-            }
-            else {
-                merged.push_back(c[ic]);
-                ic++;
-            }
-            size++;
+void rec_bubble_sort(std::vector<int> &ints, int index, std::vector<std::vector<int>> &v){
+    if(index == 0) return;
+    for(int i = 0; i < index; i++){
+        if(ints[i] > ints[i+1]){
+            int temp = ints[i];
+            ints[i] = ints[i+1];
+            ints[i+1] = temp;
+            std::vector<int> vv = std::vector<int>(ints.begin(), ints.end());
+            v.push_back(vv);
+
         }
-
-        return merged;
     }
+    rec_bubble_sort(ints, index-1, v);
+}
 
-    std::vector<int> sort(){
-        b_l_index = 0;
-        b_r_index = floor(ints.size()/2);
-        c_l_index = floor(ints.size()/2);
-        c_r_index = ints.size();
-        return merge_sort();
-    }
-    std::vector<int> merge_sort(){
-        if (ints.size() == 1) return ints;
-        b = std::vector<int>(ints.begin() + b_l_index, ints.begin() + b_r_index);
-        c = std::vector<int>(ints.begin() + c_l_index, ints.begin()+c_r_index);
-        b = merge_sort();
-        c = merge_sort();
-        std::vector<int> merged = merge();
-        for(int i : merged){
-            std::cout<< i << " ";
-        }
-        return merged;
-    }
-};
-
+void bubble_sort(std::vector<int> &ints, std::vector<std::vector<int>> &v){
+    rec_bubble_sort(ints, ints.size()-1, v);
+}
 void insert_sort(std::vector<int> &ints){
     int p = 1;
     int j = 1;
@@ -104,11 +73,7 @@ std::vector<int> merge_sort(std::vector<int> ints, int& count){
     return merged;
 }
 
-void display_merge_sort(std::vector<int> &ints){
-    int size = ints.size()-1;
-    merge_sort_arr arr{ints, ints,ints,0,size};
 
-}
 
 void merge(std::vector<int> &ints, int l, int l_end, int r, std::vector<std::vector<int>> &vecs){
     int r_start = l_end + 1;
@@ -134,10 +99,7 @@ void merge(std::vector<int> &ints, int l, int l_end, int r, std::vector<std::vec
 
         vecs.push_back(v);
     }
-    for(int e : ints){
-        std::cout<<e<< " ";
-    }
-    std::cout<<"\n";
+
 
 }
 
@@ -184,15 +146,21 @@ int main() {
     }
 
     std::vector<int> dd{44,22,5,1,2,6,55,10,9};
+    std::vector<std::vector<int>> dd_v;
+    dd_v.push_back(dd);
+    bubble_sort(dd, dd_v);
+
     int count = 0;
     std::vector<std::vector<int>> v;
     v.push_back(nums);
-    index_merge_sort(nums, v);
-    for(int a : nums ){
+   // index_merge_sort(nums, v);
+    bubble_sort(nums,v);
+    for(int a : dd ){
         std::cout << a << " ";
     }
     std::cout << "\n";
     std::cout<<count<<"\n";
+    bool reset = false;
 
     sf::RenderWindow window{sf::VideoMode::getDesktopMode(), "Sorting!"};
     int x = window.getSize().x;
@@ -212,10 +180,31 @@ int main() {
         }
 
         while(sf::Keyboard::isKeyPressed(sf::Keyboard::X)){
+            reset = true;
 
         }
 
-        if(clock.getElapsedTime().asSeconds() >= 0.05){
+        if(j >= v.size()){reset= true;
+            clock.restart();
+            while(clock.getElapsedTime().asSeconds() < 1){}
+        }
+
+        if(reset){
+            window.clear();
+
+            for(int i = 0; i < size; i++){
+                nums[i] = gen(mt);
+            }
+            v.clear();
+            v.push_back(nums);
+            index_merge_sort(nums, v);
+            reset = false;
+            nums = v[0];
+            j = 1;
+        }
+
+
+        if(clock.getElapsedTime().asSeconds() >= 0.02){
            // insert_sort(nums);
             if(j < v.size()){
                 nums = v[j];
@@ -225,6 +214,7 @@ int main() {
             clock.restart();
 
         }
+
 
         size_t vertex_num = 4 * size;
         sf::VertexArray rectangles {sf::Quads, vertex_num};
