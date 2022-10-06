@@ -2,80 +2,57 @@
 #include <SFML/Graphics.hpp>
 #include<vector>
 #include <random>
+#include <thread>
+#include <chrono>
+#include <condition_variable>
+#include <mutex>
 
+bool running = true;
+bool finished = true;
+bool restart = false;
+int milliseconds = 30;
 
-void rec_bubble_sort(std::vector<int> &ints, int index, std::vector<std::vector<int>> &v){
+std::condition_variable mcond;
+std::mutex mmutex;
+
+enum class Choice{MERGE, INSERT, BUBBLE};
+Choice choice = Choice::MERGE;
+
+void rec_bubble_sort(std::vector<int> &ints, int index){
     if(index == 0) return;
-    for(int i = 0; i < index; i++){
+    for(int i = 0; i < index && !restart; i++ ){
         if(ints[i] > ints[i+1]){
             int temp = ints[i];
             ints[i] = ints[i+1];
             ints[i+1] = temp;
-            std::vector<int> vv = std::vector<int>(ints.begin(), ints.end());
-            v.push_back(vv);
+
+            if(!restart) std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
 
         }
     }
-    rec_bubble_sort(ints, index-1, v);
+   if (!restart) rec_bubble_sort(ints, index-1);
 }
 
-void bubble_sort(std::vector<int> &ints, std::vector<std::vector<int>> &v){
-    rec_bubble_sort(ints, ints.size()-1, v);
+void bubble_sort(std::vector<int> &ints){
+    rec_bubble_sort(ints, ints.size()-1);
 }
 void insert_sort(std::vector<int> &ints){
     int p = 1;
     int j = 1;
-    while(p < ints.size()){
-        while(p >= 1 && ints[p] < ints[p-1]){
+    while(p < ints.size() && !restart){
+        while(p >= 1 && ints[p] < ints[p-1] && !restart){
             int temp = ints[p];
             ints[p] = ints[p-1];
             ints[p-1] = temp;
             p--;
-            return;
+            if(!restart) std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
         }
         j++;
         p = j;
     }
 }
 
-std::vector<int> merge(std::vector<int> a, std::vector<int> b){
-    std::vector<int> merged;
-    int size = 0;
-    int ia = 0;
-    int ib = 0;
-    while(size < a.size() + b.size()){
-        if(ib == b.size() ||(ia!=a.size() &&  a[ia] < b[ib])) {
-            merged.push_back(a[ia]);
-            ia++;
-        }
-        else {
-            merged.push_back(b[ib]);
-            ib++;
-        }
-        size++;
-    }
-
-    return merged;
-}
-
-std::vector<int> merge_sort(std::vector<int> ints, int& count){
-    if (ints.size() == 1) return ints;
-    std::vector<int> b = std::vector<int>(ints.begin(), ints.begin() + floor(ints.size()/2));
-    std::vector<int> c = std::vector<int>(ints.begin() + floor(ints.size() /2), ints.end());
-    b = merge_sort(b,count);
-    c = merge_sort(c,count);
-    std::vector<int> merged = merge(b,c);
-    for(int i : merged){
-        std::cout<< i << " ";
-    }
-    std::cout<<"\n";
-    count++;
-    return merged;
-}
-
-
-
-void merge(std::vector<int> &ints, int l, int l_end, int r, std::vector<std::vector<int>> &vecs){
+void merge(std::vector<int> &ints, int l, int l_end, int r){
     int r_start = l_end + 1;
 
     std::vector<int> copy = std::vector<int>(ints.begin() + l, ints.begin()+r+1);
@@ -83,7 +60,7 @@ void merge(std::vector<int> &ints, int l, int l_end, int r, std::vector<std::vec
     int ia = 0;
     int ib = r_start - l;
     int i = l;
-    while(size < copy.size()){
+    while(size < copy.size() && !restart){
         if(ib == copy.size() ||(ia!=r_start - l&&  copy[ia] < copy[ib])) {
             ints[i] = (copy[ia]);
             ia++;
@@ -95,15 +72,13 @@ void merge(std::vector<int> &ints, int l, int l_end, int r, std::vector<std::vec
             i++;
         }
         size++;
-        std::vector<int> v =std::vector<int>(ints.begin(), ints.end());
-
-        vecs.push_back(v);
+        if(!restart) std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
     }
 
 
 }
 
-void merge_sort(std::vector<int> &ints, int l, int r, std::vector<std::vector<int>> &vecs){
+void merge_sort(std::vector<int> &ints, int l, int r){
     if (r-l == 1) {
         if(ints[l] > ints[r]){
             int temp = ints[r];
@@ -117,13 +92,41 @@ void merge_sort(std::vector<int> &ints, int l, int r, std::vector<std::vector<in
     }
 
     int size = r - l + 1;
-    merge_sort(ints,l, l + floor(size /2 ) - 1, vecs );
-    merge_sort(ints, l+ floor((size)/2),r, vecs);
-    merge(ints,l,l + floor(size /2 ) - 1 ,r,vecs);
+    if(!restart){
+    merge_sort(ints,l, l + floor(size /2 ) - 1);
+    merge_sort(ints, l+ floor((size)/2),r);
+    merge(ints,l,l + floor(size /2 ) - 1 ,r);}
 
 }
-void index_merge_sort(std::vector<int> &ints, std::vector<std::vector<int>> &vecs){
-    merge_sort(ints, 0,ints.size()-1, vecs);
+
+
+void randomize_nums(std::vector<int>& nums, std::mt19937& mt, std::uniform_int_distribution<int>& gen){
+    while(running) {
+        std::unique_lock<std::mutex> lock(mmutex);
+        for (int i = 0; i < nums.size(); i++) {
+            nums[i] = gen(mt);
+        }
+        finished = false;
+        mcond.notify_one();
+    }
+}
+
+void sort(std::vector<int>& nums){
+    while(running){
+        std::unique_lock<std::mutex> lck (mmutex);
+        mcond.wait(lck,[] { return !finished; });
+        restart = false;
+        if(choice == Choice::MERGE){
+            merge_sort(nums, 0, nums.size() - 1);
+        }
+        else if(choice == Choice::INSERT){
+            insert_sort(nums);
+        }else if(choice == Choice::BUBBLE){
+            bubble_sort(nums);
+        }
+        finished = true;
+        lck.unlock();
+    }
 }
 
 int main() {
@@ -131,101 +134,66 @@ int main() {
     std::random_device rd;
     std::mt19937 mt(rd());
     std::uniform_int_distribution<int> gen(1,80);
-
-
-    std::vector<int> vv {1,2};
-    std::vector<int> ee{vv.begin() , vv.begin() + floor(vv.size()/2)};
-    for (int tt : ee){
-    }
-
     int size = 100;
-
-    std::vector<int> nums(size);
-    for(int i = 0; i < size; i++){
-        nums[i] = gen(mt);
-    }
-
-    std::vector<int> dd{44,22,5,1,2,6,55,10,9};
-    std::vector<std::vector<int>> dd_v;
-    dd_v.push_back(dd);
-    bubble_sort(dd, dd_v);
-
-    int count = 0;
-    std::vector<std::vector<int>> v;
-    v.push_back(nums);
-   // index_merge_sort(nums, v);
-    bubble_sort(nums,v);
-    for(int a : dd ){
-        std::cout << a << " ";
-    }
-    std::cout << "\n";
-    std::cout<<count<<"\n";
-    bool reset = false;
+    bool switch_sort = false;
+    int separation = 10;
 
     sf::RenderWindow window{sf::VideoMode::getDesktopMode(), "Sorting!"};
     int x = window.getSize().x;
-    float width = (x-size*10) / size;
+    float width = (x-(size+1)*10) / size;
+    if(size*separation + size*width > x){
+        width = float(x)/size;
+        separation = 0;
+        std::cout<<width<<std::endl;
+        std::cout<<x<<std::endl;
+
+    }
     float height = window.getSize().y;
-    sf::Clock clock;
-    int j = 1;
-    nums = v[0];
-    while(window.isOpen()){
+    std::vector<int> nums(size);
+    std::thread reset_nums(randomize_nums, std::ref(nums), std::ref(mt), std::ref(gen) );
+    std::thread test (sort, std::ref(nums));
+
+
+    while(window.isOpen() && running){
         window.clear();
 
         sf::Event event;
         while(window.pollEvent(event)){
             if(event.type == sf::Event::Closed){
                 window.close();
+                running = false;
             }
         }
 
-        while(sf::Keyboard::isKeyPressed(sf::Keyboard::X)){
-            reset = true;
-
+        Choice change = choice;
+        while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)){
+            switch_sort = true;
+            change = Choice::MERGE;
+        } while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)){
+            switch_sort = true;
+            change = Choice::INSERT;
+        }while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)){
+            switch_sort = true;
+            change = Choice::BUBBLE;
         }
 
-        if(j >= v.size()){reset= true;
-            clock.restart();
-            while(clock.getElapsedTime().asSeconds() < 1){}
+        if( switch_sort){
+            restart = true;
+            choice = change;
+            switch_sort = false;
+            finished = true;
         }
-
-        if(reset){
-            window.clear();
-
-            for(int i = 0; i < size; i++){
-                nums[i] = gen(mt);
-            }
-            v.clear();
-            v.push_back(nums);
-            index_merge_sort(nums, v);
-            reset = false;
-            nums = v[0];
-            j = 1;
-        }
-
-
-        if(clock.getElapsedTime().asSeconds() >= 0.02){
-           // insert_sort(nums);
-            if(j < v.size()){
-                nums = v[j];
-
-                j++;
-            }
-            clock.restart();
-
-        }
-
 
         size_t vertex_num = 4 * size;
         sf::VertexArray rectangles {sf::Quads, vertex_num};
         for(int i = 0; i < size; i++){
-            float left_x = 10;
-            if(i != 0) left_x = rectangles[i*4-2].position.x + 10;
-            rectangles[i*4].position = sf::Vector2f{left_x, height - 10};
+            float left_x = 0;
+            if(i != 0) left_x = rectangles[i*4-2].position.x + separation;
+            rectangles[i*4].position = sf::Vector2f{left_x, height};
             float right_x = rectangles[i*4].position.x + width;
-            rectangles[i*4 + 1].position = sf::Vector2f{right_x ,height - 10};
-            rectangles[i*4 + 2].position = sf::Vector2f{right_x, height - static_cast<float>(nums[i]*10.0) - 10};
-            rectangles[i*4 + 3].position = sf::Vector2f{left_x, height - static_cast<float>(nums[i]*10.0) - 10};
+            rectangles[i*4 + 1].position = sf::Vector2f{right_x ,height};
+            rectangles[i*4 + 2].position = sf::Vector2f{right_x, height - static_cast<float>(nums[i]*10.0)};
+            rectangles[i*4 + 3].position = sf::Vector2f{left_x, height - static_cast<float>(nums[i]*10.0)};
         }
 
 
@@ -233,6 +201,12 @@ int main() {
         window.display();
 
     }
+    restart = true;
+    running = false;
+    test.join();
+    reset_nums.join();
+
+
 }
 
 
