@@ -10,7 +10,7 @@
 bool running = true;
 bool finished = true;
 bool restart = false;
-int milliseconds = 30;
+int milliseconds = 15;
 
 std::condition_variable mcond;
 std::mutex mmutex;
@@ -133,6 +133,13 @@ int main() {
 
     std::random_device rd;
     std::mt19937 mt(rd());
+    sf::Font arial;
+    arial.loadFromFile("arial.ttf");
+    sf::Text text;
+    text.setFont(arial);
+    text.setCharacterSize(30);
+    text.setString("Merge Sort");
+    text.move(20,20);
     std::uniform_int_distribution<int> gen(1,80);
     int size = 100;
     bool switch_sort = false;
@@ -169,12 +176,15 @@ int main() {
         while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)){
             switch_sort = true;
             change = Choice::MERGE;
+            text.setString("Merge Sort");
         } while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)){
             switch_sort = true;
             change = Choice::INSERT;
+            text.setString("Insert Sort");
         }while(sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)){
             switch_sort = true;
             change = Choice::BUBBLE;
+            text.setString("Bubble Sort");
         }
 
         if( switch_sort){
@@ -197,6 +207,7 @@ int main() {
         }
 
 
+        window.draw(text);
         window.draw(rectangles);
         window.display();
 
